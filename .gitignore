@@ -1,0 +1,11 @@
+# Common
+.DS_Store
+*.log
+
+# Project-Specific
+.sass-cache
+/dist
+/build
+/lib
+/node_modules
+config/local.*

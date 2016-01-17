@@ -1,0 +1,30 @@
+{
+    "name": "b2w",
+    "version": "0.0.1",
+    "description": "A temporal physics based puzzler",
+    "main": "index.js",
+    "scripts": {
+        "start": "npm run precompile --silent && webpack-dev-server --content-base='build' --port=1337",
+        "precompile": "rm -rf build && mkdir -p build && cd build && ln -s ../assets assets && cd ../ && cp src/index.html build/index.html",
+        "compile": "webpack",
+        "test": "echo \"TODO: Create test script\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/DanLombardy/b2w.git"
+    },
+    "author": "",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/DanLombardy/b2w/issues"
+    },
+    "homepage": "https://github.com/DanLombardy/b2w#readme",
+    "devDependencies": {
+        "babel-core": "^6.4.0",
+        "babel-loader": "^6.2.1",
+        "babel-preset-es2015": "^6.3.13",
+        "immutable": "^3.7.6",
+        "webpack": "^1.12.11",
+        "webpack-dev-server": "^1.14.1"
+    }
+}
