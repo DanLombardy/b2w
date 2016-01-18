@@ -6,7 +6,7 @@ function preload(){
   game.load.image('ground', 'assets/sprites/platform.png')
   game.load.image('ball', 'assets/sprites/orb-blue.png', 50, 50)
   game.load.image('ball2', 'assets/sprites/orb-red.png', 50, 50)
-  game.load.image('line', 'assets/sprites/line.PNG', 200, 4)
+  game.load.image('line', 'assets/sprites/line.png', 200, 4)
 
 }
 
@@ -42,10 +42,8 @@ function create(){
   ledge.body.immovable = true
 
   ledge = platforms.create(-150, 250, 'ground')
-	ledge.body.immovable = true
 
-
-  player = game.add.sprite(32, game.world.height - 150, 'ball')
+  player.game.sprite(32, game.world.height - 150, 'ball')
 
   game.physics.arcade.enable(player)
 
@@ -67,10 +65,10 @@ function update(){
   game.physics.arcade.collide(player, platforms)
   game.physics.arcade.collide(player, playerLedges)
 
-  player.body.velocity.x = 0
+  player.velocity.x = 0
 
   if (playerLedge) playerLedge.body.velocity.x = 0
-  if (switchButton.isDown && killCount === 0  ) {
+  if (switchbutton.isDown && killCount === 0  ) {
 
    player.kill();
 
@@ -78,11 +76,11 @@ function update(){
    py = player.body.position.y;
 
    // playerledge = game.add.sprite(px + i*60, py, 'playerledge');
-   playerLedge = playerLedges.create(px, py, 'line')
-   playerLedges.add(playerLedge);
-   game.physics.arcade.enable(playerLedge);
-   playerLedge.body.gravity.y = 0;
-   playerLedge.body.immovable = true;
+   playerledge = playerledges.create(px, py, 'playerledge')
+   playerledges.add(playerledge);
+   game.physics.arcade.enable(playerledge);
+   playerledge.body.gravity.y = 0;
+   playerledge.body.immovable = true;
    killCount = 1;
 }
    if (cursors.down.isDown && killCount === 1  ) {
