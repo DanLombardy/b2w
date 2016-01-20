@@ -2,7 +2,7 @@ var path = require('path')
 
 module.exports = {
 	context: __dirname,
-	entry: './src/index.js',
+	entry: './src/index2.js',
 	output: {
 		path: path.resolve(__dirname, '/build'),
 		filename: 'b2w.js'

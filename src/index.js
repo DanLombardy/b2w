@@ -26,6 +26,8 @@ var winSpot;
 
 
 function create(){
+  // game.game.renderer.renderSession.roundPixels = true;
+  game.world.resize(800*3, 750);
 
   game.physics.startSystem(Phaser.Physics.ARCADE)
 
@@ -76,6 +78,7 @@ function create(){
 function update(){
   game.physics.arcade.overlap(player, winSpot, win, null, this);
 
+  game.camera.follow(this.player);
   game.physics.arcade.collide(player, platforms)
   game.physics.arcade.collide(player, playerLedges)
 
