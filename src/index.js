@@ -105,8 +105,9 @@ function update(){
      // playerledge = game.add.sprite(px + i*60, py, 'playerledge');
      playerLedge = playerLedges.create(px, py, 'line')
      playerLedges.add(playerLedge);
-     game.physics.arcade.enable(playerLedge);
-     playerLedge.body.gravity.y = 0;
+     game.physics.ninja.enable(playerLedge);
+     playerLedge.body.gravityScale = 0;
+
      playerLedge.body.immovable = true;
      killCount = 1;
   }
