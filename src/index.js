@@ -9,9 +9,12 @@ function preload(){
   game.load.image('line', 'assets/sprites/line.PNG', 200, 4)
   game.load.tilemap('map', 'assets/tilemaps/maps/ninja-tilemap.json', null, Phaser.Tilemap.TILED_JSON);
   game.load.image('kenney', 'assets/tilemaps/tiles/kenney.png');
+  game.load.image('spring', 'assets/sprites/spring-4-small.png')
 }
 
 var playerLedges
+var playerSprings
+var playerSpring
 var playerLedge
 var px
 var py
@@ -71,25 +74,22 @@ function create(){
     ledge.body.immovable = true;
     ledge.body.gravityScale = 0;
 
-    //add playerLedge group and capabilites
-    playerLedges = game.add.group()
+    //add playerSpring group and capabilites
+    playerSprings = game.add.group()
 
 }
 
 function update(){
 
-  //add collision for players, platforms, and playerLedges
+  //add collision for players, platforms, and playerSprings
     game.physics.ninja.collide(player, platforms)
-    game.physics.ninja.collide(player, playerLedges)
+    game.physics.ninja.collide(player, playerSprings, springAccel)
 
 
   for (var i = 0; i < tiles.length; i++)
     {
       player.body.aabb.collideAABBVsTile(tiles[i].tile);
     }
-
-    game.physics.ninja.collide(player, platforms)
-    game.physics.ninja.collide(player, playerLedges)
 
 //add basic movement and jump to cursors
   if (cursors.left.isDown )
@@ -108,19 +108,19 @@ function update(){
      player.body.moveUp(350)
   }
 
-  if (switchButton.isDown && killCount === 0  ) {
+  if (switchButton.isDown && player.body.touching.down ) {
 
      player.kill();
 
      px = player.body.x;
      py = player.body.y;
 
-     playerLedge = playerLedges.create(px, py, 'line')
-     playerLedges.add(playerLedge);
-     game.physics.ninja.enable(playerLedge);
-     playerLedge.body.gravityScale = 0;
+     playerSpring = playerSprings.create(px, py, 'spring')
+     playerSprings.add(playerSpring);
+     game.physics.ninja.enable(playerSpring);
+     playerSpring.body.gravityScale = 0;
 
-     playerLedge.body.immovable = true;
+     playerSpring.body.immovable = true;
      killCount = 1;
   }
 
@@ -130,6 +130,18 @@ function update(){
     // player.body.position.y = game.world.height - 100;
     player.body.y = py;
     killCount = 0;
+  }
+
+  if (cursors.down.isDown && killCount === 1  ) {
+    player.revive();
+    player.body.x = px;
+    // player.body.position.y = game.world.height - 100;
+    player.body.y = py;
+    killCount = 0;
+  }
+
+  function springAccel(){
+    player.body.moveUp(1000)
   }
 
 }
