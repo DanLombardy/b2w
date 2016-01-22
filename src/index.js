@@ -1,110 +1,147 @@
-var game = new Phaser.Game(800, 800, Phaser.AUTO, '',{
+var game = new Phaser.Game(800, 750, Phaser.AUTO, '',{
   preload: preload, create: create, update, update
-});
+})
 
 function preload(){
   game.load.image('ground', 'assets/sprites/platform.png')
   game.load.image('ball', 'assets/sprites/orb-blue.png', 50, 50)
   game.load.image('ball2', 'assets/sprites/orb-red.png', 50, 50)
   game.load.image('line', 'assets/sprites/line.PNG', 200, 4)
-
+  game.load.tilemap('map', 'assets/tilemaps/maps/ninja-tilemap.json', null, Phaser.Tilemap.TILED_JSON);
+  game.load.image('kenney', 'assets/tilemaps/tiles/kenney.png');
+  game.load.image('spring', 'assets/sprites/spring-4-small.png')
 }
 
 var playerLedges
+var playerSprings
+var playerSpring
 var playerLedge
 var px
 var py
 var player
 var platforms
+var ground
 var ledge
 var cursors
 var switchButton
 var killCount = 0
-
+var map
+var tiles
+var layer
 
 function create(){
-
-  game.physics.startSystem(Phaser.Physics.ARCADE)
-
+//set up initial system environment
+  game.physics.startSystem(Phaser.Physics.NINJA)
   game.stage.backgroundColor = 0x4488cc
 
-  platforms = game.add.group()
+//add tilemap and tilemap physics
+  map = game.add.tilemap('map');
+  map.addTilesetImage('kenney');
+  layer = map.createLayer('Tile Layer 1');
+  layer.resizeWorld();
+  var slopeMap = { '32': 1, '77': 1, '95': 2, '36': 3, '137': 3, '140': 2 };
+  tiles = game.physics.ninja.convertTilemap(map, layer, slopeMap);
 
-  platforms.enableBody = true
+//add player and initialize ninja physics on it
+  player = game.add.sprite(0, 20, 'ball')
 
-  var ground = platforms.create(0, game.world.height - 64, 'ground')
+  game.physics.ninja.enable(player)
 
-  ground.scale.setTo(2, 2)
+  player.body.collideWorldBounds = true;
+  player.body.bounce = 0.2
 
-  ground.body.immovable = true
+//game camera follows player
+  game.camera.follow(player)
 
-  ledge = platforms.create(400, 400, 'ground')
-  ledge.body.immovable = true
-
-  ledge = platforms.create(-150, 250, 'ground')
-	ledge.body.immovable = true
-
-
-  player = game.add.sprite(32, game.world.height - 150, 'ball')
-
-  game.physics.arcade.enable(player)
-
-  player.body.bounce.y = .2
-  player.body.gravity.y = 300
-  player.body.collideWorldBounds = true
-
+//add cursors
   cursors = game.input.keyboard.createCursorKeys()
   switchButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR)
 
-  playerLedges = game.add.group()
+  //add group for ground and standard ledges and config
+    platforms = game.add.group();
 
 
+
+    ledge = platforms.create(700, 400, 'ground');
+
+    game.physics.ninja.enable(ledge);
+    ledge.body.immovable = true;
+    ledge.body.gravityScale = 0;
+
+    ledge = platforms.create(-150, 250, 'ground');
+
+    game.physics.ninja.enable(ledge);
+    ledge.body.immovable = true;
+    ledge.body.gravityScale = 0;
+
+    //add playerSpring group and capabilites
+    playerSprings = game.add.group()
 
 }
 
 function update(){
 
-  game.physics.arcade.collide(player, platforms)
-  game.physics.arcade.collide(player, playerLedges)
+  //add collision for players, platforms, and playerSprings
+    game.physics.ninja.collide(player, platforms)
+    game.physics.ninja.collide(player, playerSprings, springAccel)
 
-  player.body.velocity.x = 0
 
-  if (playerLedge) playerLedge.body.velocity.x = 0
-  if (switchButton.isDown && killCount === 0  ) {
+  for (var i = 0; i < tiles.length; i++)
+    {
+      player.body.aabb.collideAABBVsTile(tiles[i].tile);
+    }
 
-   player.kill();
-
-   px = player.body.position.x;
-   py = player.body.position.y;
-
-   // playerledge = game.add.sprite(px + i*60, py, 'playerledge');
-   playerLedge = playerLedges.create(px, py, 'line')
-   playerLedges.add(playerLedge);
-   game.physics.arcade.enable(playerLedge);
-   playerLedge.body.gravity.y = 0;
-   playerLedge.body.immovable = true;
-   killCount = 1;
-}
-   if (cursors.down.isDown && killCount === 1  ) {
-     player.revive();
-     player.body.position.x = 0;
-     player.body.position.y = 0;
-     killCount = 0;
-   }
-
-  if (cursors.left.isDown)
+//add basic movement and jump to cursors
+  if (cursors.left.isDown )
   {
-     player.body.velocity.x = -150;
+     player.body.moveLeft(150);
 
   }
   if (cursors.right.isDown)
   {
-     player.body.velocity.x = 150;
+     player.body.moveRight(150);
 
   }
 
-  if (cursors.up.isDown && player.body.touching.down)
+  if (cursors.up.isDown && player.body.touching.down )
   {
-     player.body.velocity.y = -350;
+     player.body.moveUp(350)
   }
+
+  if (switchButton.isDown && player.body.touching.down ) {
+
+     player.kill();
+
+     px = player.body.x;
+     py = player.body.y;
+
+     playerSpring = playerSprings.create(px, py, 'spring')
+     playerSprings.add(playerSpring);
+     game.physics.ninja.enable(playerSpring);
+     playerSpring.body.gravityScale = 0;
+
+     playerSpring.body.immovable = true;
+     killCount = 1;
+  }
+
+  if (cursors.down.isDown && killCount === 1  ) {
+    player.revive();
+    player.body.x = px;
+    // player.body.position.y = game.world.height - 100;
+    player.body.y = py;
+    killCount = 0;
+  }
+
+  if (cursors.down.isDown && killCount === 1  ) {
+    player.revive();
+    player.body.x = px;
+    // player.body.position.y = game.world.height - 100;
+    player.body.y = py;
+    killCount = 0;
+  }
+
+  function springAccel(){
+    player.body.moveUp(1000)
+  }
+
 }
