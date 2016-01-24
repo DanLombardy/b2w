@@ -220,7 +220,6 @@
 	function mapCollisionToSpringRotation(playerTouching, tileId) {
 		switch (tileId) {
 			case 1:
-				// TODO: Check plaer is touching
 				if (playerTouching.down) {
 					return 0
 				}
