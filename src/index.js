@@ -1,110 +1,255 @@
-var game = new Phaser.Game(800, 800, Phaser.AUTO, '',{
-  preload: preload, create: create, update, update
-});
+// File is written using JS Standard Style with the exception that indentation
+// should be *tabs*. Set your preferred number of spaces in your editor, not the
+// source file.
+//
+// https://github.com/JedWatson/happiness
 
-function preload(){
-  game.load.image('ground', 'assets/sprites/platform.png')
-  game.load.image('ball', 'assets/sprites/orb-blue.png', 50, 50)
-  game.load.image('ball2', 'assets/sprites/orb-red.png', 50, 50)
-  game.load.image('line', 'assets/sprites/line.PNG', 200, 4)
+// Prevent global leakage
+(function() {
+	// Expose Phaser to the local context
+	// TODO: Convert this to a require statement once Phaser supports it - https://github.com/photonstorm/phaser/issues/1974
+	let Phaser = window.Phaser
 
-}
+	let game
+	let debugKey
+	let springs
+	let player
+	let platforms
+	let ground
+	let ledge
+	let cursors
+	let switchButton
+	let map
+	let tiles
+	let layer
 
-var playerLedges
-var playerLedge
-var px
-var py
-var player
-var platforms
-var ledge
-var cursors
-var switchButton
-var killCount = 0
+	// Starting Coordinates
+	let startPosition = [0, 20]
 
+	// Player states
+	const BALL = 'ball'
+	const SPRING = 'spring'
+	let playerState = BALL
 
-function create(){
+	// Spring behavior
+	const VERTICAL_SPRING_FORCE = 700
+	const HORIZONTAL_SPRING_FORCE = 700
 
-  game.physics.startSystem(Phaser.Physics.ARCADE)
+	// Player behavior
+	const GROUND_MOVEMENT_FORCE = 40
+	const AIR_MOVEMENT_FORCE = 10
 
-  game.stage.backgroundColor = 0x4488cc
+	const MAXIMUM_PLAYER_VELOCITY = 6
+	const MINIMUM_PLAYER_VELOCITY = -1 * MAXIMUM_PLAYER_VELOCITY
 
-  platforms = game.add.group()
+	window.onload = initializeGame
 
-  platforms.enableBody = true
+	function initializeGame() {
+		if (window.innerWidth === 0 || window.innerHeight === 0) {
+			return setTimeout(initializeGame, 16)
+		}
 
-  var ground = platforms.create(0, game.world.height - 64, 'ground')
+		game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.AUTO, '', { preload, create, update })
+	}
 
-  ground.scale.setTo(2, 2)
+	function preload() {
+		game.load.image('ground', 'assets/sprites/platform.png')
+		game.load.image('ball', 'assets/sprites/orb-blue.png', 50, 50)
+		game.load.image('ball2', 'assets/sprites/orb-red.png', 50, 50)
+		game.load.image('line', 'assets/sprites/line.PNG', 200, 4)
+		game.load.tilemap('map', 'assets/tilemaps/maps/ninja-tilemap.json', null, Phaser.Tilemap.TILED_JSON)
+		game.load.image('kenney', 'assets/tilemaps/tiles/kenney.png')
+		game.load.image('spring', 'assets/sprites/spring-4-small.png')
+	}
 
-  ground.body.immovable = true
+	function create() {
+		// Set up initial system environment
+		game.physics.startSystem(Phaser.Physics.NINJA)
+		game.stage.backgroundColor = 0x4488cc
 
-  ledge = platforms.create(400, 400, 'ground')
-  ledge.body.immovable = true
+		// Add tilemap and tilemap physics
+		map = game.add.tilemap('map')
+		map.addTilesetImage('kenney')
+		layer = map.createLayer('Tile Layer 1')
+		layer.resizeWorld()
+		let slopeMap = { '32': 1, '77': 1, '95': 2, '36': 3, '137': 3, '140': 2 }
+		tiles = game.physics.ninja.convertTilemap(map, layer, slopeMap)
 
-  ledge = platforms.create(-150, 250, 'ground')
-	ledge.body.immovable = true
+		// Add player and initialize ninja physics on it
+		player = game.add.sprite.apply(game.add, startPosition.concat('ball'))
 
+		game.physics.ninja.enable(player)
 
-  player = game.add.sprite(32, game.world.height - 150, 'ball')
+		player.body.collideWorldBounds = true
+		player.body.bounce = 0.2
 
-  game.physics.arcade.enable(player)
+		// Game camera follows player
+		game.camera.follow(player)
 
-  player.body.bounce.y = .2
-  player.body.gravity.y = 300
-  player.body.collideWorldBounds = true
+		// Add cursors
+		cursors = game.input.keyboard.createCursorKeys()
+		debugKey = game.input.keyboard.addKey(Phaser.KeyCode.W)
+		switchButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR)
 
-  cursors = game.input.keyboard.createCursorKeys()
-  switchButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR)
+		// Add group for ground and standard ledges and config
+		platforms = game.add.group()
 
-  playerLedges = game.add.group()
+		// Add springs group and capabilites
+		springs = game.add.group()
+	}
 
+	function update() {
+		// Add collision for platforms
+		game.physics.ninja.collide(player, platforms)
 
+		// Add collision for springs and propel the player if true
+		if (playerState === BALL) {
+			springs.forEach((spring) => {
+				if (Phaser.Rectangle.intersects(player.getBounds(), spring.getBounds())) {
+					onSpringCollision(player, spring)
+				}
+			})
+		}
 
-}
+		// Add collision for springs and store a reference to the tile that collides
+		let collidedTiles = tiles.reduce((accumulator, tileBody, index) => {
+			let collision = player.body.aabb.collideAABBVsTile(tileBody.tile)
 
-function update(){
+			if (collision !== false) {
+				accumulator.push(tileBody.tile)
+			}
 
-  game.physics.arcade.collide(player, platforms)
-  game.physics.arcade.collide(player, playerLedges)
+			return accumulator
+		}, [])
 
-  player.body.velocity.x = 0
+		// TODO: Detect whether the collided tile is actually touching the player
+		// or if they're simply intersecting
+		let isPlayerColliding = collidedTiles.length > 0
+		let isPlayerGrounded = isPlayerColliding || player.body.touching.down
 
-  if (playerLedge) playerLedge.body.velocity.x = 0
-  if (switchButton.isDown && killCount === 0  ) {
+		// Add basic movement for the ground and mid-air
+		if (cursors.left.isDown && player.body.deltaX() < MAXIMUM_PLAYER_VELOCITY) {
+			if (isPlayerGrounded) {
+				player.body.moveLeft(GROUND_MOVEMENT_FORCE)
+			} else {
+				player.body.moveLeft(AIR_MOVEMENT_FORCE)
+			}
+		} else if (cursors.right.isDown && player.body.deltaX() > MINIMUM_PLAYER_VELOCITY) {
+			if (isPlayerGrounded) {
+				player.body.moveRight(GROUND_MOVEMENT_FORCE)
+			} else {
+				player.body.moveRight(AIR_MOVEMENT_FORCE)
+			}
+		}
 
-   player.kill();
+		// Transform Player to Spring
+		if (playerState === BALL && switchButton.isDown && isPlayerGrounded) {
+			player.kill()
+			playerState = SPRING
 
-   px = player.body.position.x;
-   py = player.body.position.y;
+			let springPosition = [player.body.x, player.body.y]
+			let springAngle = 0
 
-   // playerledge = game.add.sprite(px + i*60, py, 'playerledge');
-   playerLedge = playerLedges.create(px, py, 'line')
-   playerLedges.add(playerLedge);
-   game.physics.arcade.enable(playerLedge);
-   playerLedge.body.gravity.y = 0;
-   playerLedge.body.immovable = true;
-   killCount = 1;
-}
-   if (cursors.down.isDown && killCount === 1  ) {
-     player.revive();
-     player.body.position.x = 0;
-     player.body.position.y = 0;
-     killCount = 0;
-   }
+			if (collidedTiles.length > 0) {
+				springAngle = mapCollisionToSpringRotation(player.body.touching, collidedTiles[0].id)
 
-  if (cursors.left.isDown)
-  {
-     player.body.velocity.x = -150;
+				// Adjust spring location on slopes
+				switch (springAngle) {
+					case 0:
+						springPosition[0] -= 16
+						break
 
-  }
-  if (cursors.right.isDown)
-  {
-     player.body.velocity.x = 150;
+					case 45:
+						springPosition[0] -= 38
+						springPosition[1] -= 11
+						break
 
-  }
+					case 315:
+						springPosition[0] += 2
+						springPosition[1] -= 9
+						break
+				}
+			}
 
-  if (cursors.up.isDown && player.body.touching.down)
-  {
-     player.body.velocity.y = -350;
-  }
-}
+			let spring = springs.create.apply(springs, springPosition.concat('spring'))
+			spring.scale.y = 0.66
+			spring.angle = springAngle
+
+			springs.add(spring)
+			game.physics.ninja.enable(spring)
+			spring.body.gravityScale = 0
+
+			spring.body.immovable = true
+		}
+
+		// Transform Spring to Player
+		if (playerState === SPRING && cursors.down.isDown) {
+			player.revive()
+			playerState = BALL
+		}
+
+		if (debugKey.isDown === true) {
+			debugger
+
+			debugKey.isDown = false
+		}
+	}
+
+	// Rotation of springs
+	//       180
+	//       \/
+	// 90 ->   <- 270
+	//       /\
+	//       0
+	function onSpringCollision(player, spring) {
+		let angle = spring.angle
+
+		if (angle > -90 || angle < 90) {
+			player.body.moveUp(VERTICAL_SPRING_FORCE)
+		} else if (angle < -90 || angle > 90) {
+			player.body.moveDown(VERTICAL_SPRING_FORCE)
+		}
+
+		if (angle > 0 && angle < 180) {
+			player.body.moveRight(HORIZONTAL_SPRING_FORCE)
+		} else if (angle < 0 && angle > -180) {
+			player.body.moveLeft(HORIZONTAL_SPRING_FORCE)
+		}
+	}
+
+	function mapCollisionToSpringRotation(playerTouching, tileId) {
+		switch (tileId) {
+			case 1:
+				// TODO: Check plaer is touching
+				if (playerTouching.down) {
+					return 0
+				}
+
+				if (playerTouching.left) {
+					return 90
+				}
+
+				if (playerTouching.up) {
+					return 180
+				}
+
+				if (playerTouching.right) {
+					return 270
+				}
+
+				throw new Error('Your player isn\'t touching!' + JSON.stringify(playerTouching))
+
+			case 2:
+				return 45
+
+			case 3:
+				return 315
+
+			case 4:
+				return 225
+
+			case 5:
+				return 135
+		}
+	}
+})()
