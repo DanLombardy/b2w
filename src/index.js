@@ -354,6 +354,23 @@
 	}
 
 	function saveState(t, x, y) {
+		let firstPosition
+		let secondPosition
+		let shiftedSession
+
+		firstPosition = currentSession.first()
+
+		// Check if the ball isn't moving
+		if (firstPosition != null && firstPosition.x === x && firstPosition.y === y) {
+			shiftedSession = currentSession.shift()
+			secondPosition = shiftedSession.first()
+
+			if (secondPosition != null && firstPosition.x === secondPosition.x && firstPosition.y === secondPosition.y) {
+				// Replace the most recent duplicated position with the new timestamp
+				currentSession = shiftedSession.unshift({ t, x, y })
+			}
+		}
+
 		currentSession = currentSession.unshift({ t, x, y })
 	}
 
