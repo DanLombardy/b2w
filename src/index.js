@@ -25,6 +25,7 @@
 	let livesLeft = 5
 	let exit
 	let winText
+	let redball
 
 	// Starting Coordinates
 	let startPosition = [0, 20]
@@ -64,6 +65,7 @@
 		game.load.image('kenney', 'assets/tilemaps/tiles/kenney.png')
 		game.load.image('spring', 'assets/sprites/spring-4-small.png')
 		game.load.image('redball', 'assets/sprites/red_ball.png')
+			game.load.image('diamond', 'assets/sprites/diamond.png')
 	}
 
 	function create() {
@@ -101,20 +103,35 @@
 		// Add springs group and capabilites
 		springs = game.add.group()
 
-  winText = game.add.text(16, 16, 'You have ' + (livesLeft)  + ' lives left to beat this level\n Touch the red ball to win!', { fontSize: '32px', fill: '#000' })
+  winText = game.add.text(16, 16, 'You have ' + (livesLeft)  + ' lives left to beat this level\n Get the red ball to the exit to win!', { fontSize: '32px', fill: '#000' })
   winText.fixedToCamera = true
 
-  exit = game.add.sprite(0, 100, 'redball')
+	redball = game.add.sprite(0, 100, 'redball')
+  game.physics.ninja.enable(redball)
+
+	exit = game.add.sprite(2000, 0, 'diamond')
   game.physics.ninja.enable(exit)
 
 	}
 
 	function update() {
-		// Win the level when player touches exit
+		// Win the level when player or redball touches exit
 		 game.physics.ninja.overlap(player, exit, win, null, this);
+		 game.physics.ninja.overlap(redball, exit, win, null, this);
 
 		// Add collision for platforms
 		game.physics.ninja.collide(player, platforms)
+
+		// Add collision for redball and player
+		game.physics.ninja.collide(player, redball)
+
+		// Add collision for springs/redball and propel the redball if true
+
+		springs.forEach((spring) => {
+			if (Phaser.Rectangle.intersects(redball.getBounds(), spring.getBounds())) {
+				onSpringCollision(redball, spring)
+			}
+		})
 
 
 		// Add collision for springs and propel the player if true
@@ -129,8 +146,8 @@
 		// Add collision for springs and store a reference to the tile that collides
 		let collidedTiles = tiles.reduce((accumulator, tileBody, index) => {
 			let collision = player.body.aabb.collideAABBVsTile(tileBody.tile)
-			let collision2 = exit.body.aabb.collideAABBVsTile(tileBody.tile)
-
+			let collision2 = redball.body.aabb.collideAABBVsTile(tileBody.tile)
+			let collision3 = exit.body.aabb.collideAABBVsTile(tileBody.tile)
 			if (collision !== false) {
 				accumulator.push(tileBody.tile)
 			}
@@ -163,7 +180,7 @@
 			player.kill()
 
 	 	livesLeft--
-	  winText.text = 'You have ' + (livesLeft - 1) + ' lives left to beat this level \n If you die again, you lose!\n Collect the star to win!'
+	  winText.text = 'You have ' + (livesLeft - 1) + ' lives left to beat this level \n If you die again, you lose!\n Get the  the red ball to the exit to win!'
 	  if (livesLeft === 0) lose()
 
 
