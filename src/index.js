@@ -368,6 +368,7 @@
 			if (secondPosition != null && firstPosition.x === secondPosition.x && firstPosition.y === secondPosition.y) {
 				// Replace the most recent duplicated position with the new timestamp
 				currentSession = shiftedSession.unshift({ t, x, y })
+				return
 			}
 		}
 
