@@ -145,7 +145,6 @@
 			nextPosition = p_session.first()
 
 			if (nextPosition === undefined) {
-				currentGhostSessions = currentGhostSessions.splice(p_index, 1)
 				return
 			}
 
@@ -170,7 +169,6 @@
 			if (nextPosition === undefined) {
 				applyState(ghost, previousPosition)
 
-				currentGhostSessions = currentGhostSessions.splice(p_index, 1)
 				return
 			}
 
