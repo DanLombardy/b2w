@@ -375,16 +375,22 @@
 	}
 
 	function saveSessionAndRestart() {
+		let sessionArray
+		let sampledSession
+		let simplifiedSession
+		let blendedSession
+		let sortedSession
+
 		// Convert the session to an Array - TODO: Should the current session always be stored as an Array and then converted to a Stack?
-		let sessionArray = currentSession.reverse().toArray()
+		sessionArray = currentSession.reverse().toArray()
 		// Sample 33.3% of the session to add detail back into the spline to help with linear surfaces
-		let sampledSession = sampleSize(sessionArray, sessionArray.length * 0.333)
+		sampledSession = sampleSize(sessionArray, sessionArray.length * 0.333)
 		// Simplify the spline
-		let simplifiedSession = simplifySpline(sessionArray, 0.3)
+		simplifiedSession = simplifySpline(sessionArray, 0.3)
 		// Blend the simplified spline with the sampled spline
-		let blendedSession = unionWith(sampledSession, simplifiedSession, identicalComparator)
+		blendedSession = unionWith(sampledSession, simplifiedSession, identicalComparator)
 		// Sort the spline based on time
-		let sortedSession = sortBy(blendedSession, "t")
+		sortedSession = sortBy(blendedSession, "t")
 		// Convert the spline to a Stack and store for future playback
 		playerSessions = playerSessions.push(new Stack(sortedSession))
 		// Restart the game
