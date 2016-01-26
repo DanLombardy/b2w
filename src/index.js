@@ -9,12 +9,21 @@
 	// Expose Phaser to the local context
 	// TODO: Convert this to a require statement once Phaser supports it - https://github.com/photonstorm/phaser/issues/1974
 	let Phaser = window.Phaser
+	let { List, Record, Stack } = require("immutable")
+
+	let PlayerPosition = new Record({ t: undefined, x: undefined, y: undefined })
+	let PlayerState = new Record({ t: undefined, x:undefined, y: undefined, state: undefined })
+
+	let playerSessions = new List()
+	let currentGhostSessions = new List()
+	let currentSession
 
 	let game
 	let debugKey
 	let springs
 	let player
 	let platforms
+	let ghosts
 	let ground
 	let ledge
 	let cursors
@@ -22,6 +31,7 @@
 	let map
 	let tiles
 	let layer
+	let gameStartTime
 
 	// Starting Coordinates
 	let startPosition = [0, 20]
@@ -96,9 +106,86 @@
 
 		// Add springs group and capabilites
 		springs = game.add.group()
+
+		currentSession = new Stack()
+		currentSession = currentSession.unshift(new PlayerState({ t: 0, x: player.x, y: player.y, state: BALL }))
+
+		// Create the ghosted player objects
+		ghosts = game.add.group()
+
+		currentGhostSessions = playerSessions
+		currentGhostSessions.forEach((p_session) =>
+			ghosts.create(player.x, player.y, 'ball')
+		)
+
+		gameStartTime = Date.now()
 	}
 
 	function update() {
+		let now = getElapsedTime()
+
+		// Update the ghosted player objects' positions
+		currentGhostSessions.forEach((p_session, p_index) => {
+			let ghost = ghosts.getChildAt(p_index)
+
+			let currentPosition = p_session.first()
+
+			if (currentPosition === undefined) {
+				currentGhostSessions = currentGhostSessions.splice(p_index, 1)
+				return
+			}
+
+			p_session = p_session.shift()
+
+			if (currentPosition.t === now) {
+				applyState(ghost, currentPosition)
+				currentGhostSessions.set(p_index, p_session)
+				return
+			} else {
+				let nextPosition = currentPosition
+				let previousPosition
+				let deltaTimeToNextState
+				let deltaPercentage
+				let ghostPosition
+
+				// Find the next and previous ghost states
+				while (nextPosition !== undefined && nextPosition.t <= now) {
+					previousPosition = nextPosition
+					nextPosition = p_session.first()
+					p_session = p_session.shift()
+				}
+
+				// Handle the end of the Stack
+				if (nextPosition === undefined) {
+					if (currentPosition === undefined) {
+						return
+					}
+
+					applyState(ghost, currentPosition)
+
+					currentGhostSessions = currentGhostSessions.splice(p_index, 1)
+					return
+				}
+
+				// Handle a perfect match
+				if (nextPosition.t === now) {
+					applyState(ghost, nextPosition)
+					currentGhostSessions.set(p_index, p_session)
+					return
+				}
+
+				// Interpolate the current ghost position
+				deltaTimeToNextState = nextPosition.t - now
+				deltaPercentage = deltaTimeToNextState / (nextPosition.t - previousPosition.t)
+
+				ghostPosition = new PlayerPosition({ x: previousPosition.x + ((nextPosition.x - previousPosition.x) * deltaPercentage), y: previousPosition.y + ((nextPosition.y - previousPosition.y) * deltaPercentage), t: now })
+
+				applyState(ghost, ghostPosition)
+
+				currentGhostSessions.set(p_index, p_session)
+			}
+		})
+
 		// Add collision for platforms
 		game.physics.ninja.collide(player, platforms)
 
@@ -144,6 +231,10 @@
 
 		// Transform Player to Spring
 		if (playerState === BALL && switchButton.isDown && isPlayerGrounded) {
+			ressurrectPlayer()
+
+			return
+
 			player.kill()
 			playerState = SPRING
 
@@ -182,17 +273,13 @@
 			spring.body.immovable = true
 		}
 
-		// Transform Spring to Player
-		if (playerState === SPRING && cursors.down.isDown) {
-			player.revive()
-			playerState = BALL
-		}
-
 		if (debugKey.isDown === true) {
 			debugger
 
 			debugKey.isDown = false
 		}
+
+		saveState(player.x, player.y, now)
 	}
 
 	// Rotation of springs
@@ -250,5 +337,33 @@
 			case 5:
 				return 135
 		}
+	}
+
+	function applyState(ghost, state) {
+		// TODO: Handle changing into a spring
+		// if (!state instanceof PlayerPosition) {
+		// 	return
+		// }
+
+		ghost.x = state.x
+		ghost.y = state.y
+	}
+
+	function saveState(x, y, t) {
+		currentSession = currentSession.unshift(new PlayerPosition({ x, y, t }))
+	}
+
+	function ressurrectPlayer() {
+		// TODO: Move player state transformation to wherever this occurs
+		let t = getElapsedTime()
+
+		currentSession = currentSession.unshift(new PlayerState({ t, x: player.x, y: player.y, state: SPRING }))
+		currentSession = currentSession.reverse()
+		playerSessions = playerSessions.push(currentSession)
+		game.state.restart(true, true)
+	}
+
+	function getElapsedTime() {
+		return Date.now() - gameStartTime
 	}
 })()
