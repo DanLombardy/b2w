@@ -22,6 +22,9 @@
 	let map
 	let tiles
 	let layer
+	let livesLeft = 5
+	let exit
+	let winText
 
 	// Starting Coordinates
 	let startPosition = [0, 20]
@@ -60,6 +63,7 @@
 		game.load.tilemap('map', 'assets/tilemaps/maps/ninja-tilemap.json', null, Phaser.Tilemap.TILED_JSON)
 		game.load.image('kenney', 'assets/tilemaps/tiles/kenney.png')
 		game.load.image('spring', 'assets/sprites/spring-4-small.png')
+		game.load.image('redball', 'assets/sprites/red_ball.png')
 	}
 
 	function create() {
@@ -96,11 +100,22 @@
 
 		// Add springs group and capabilites
 		springs = game.add.group()
+
+  winText = game.add.text(16, 16, 'You have ' + (livesLeft)  + ' lives left to beat this level\n Touch the red ball to win!', { fontSize: '32px', fill: '#000' })
+  winText.fixedToCamera = true
+
+  exit = game.add.sprite(0, 100, 'redball')
+  game.physics.ninja.enable(exit)
+
 	}
 
 	function update() {
+		// Win the level when player touches exit
+		 game.physics.ninja.overlap(player, exit, win, null, this);
+
 		// Add collision for platforms
 		game.physics.ninja.collide(player, platforms)
+
 
 		// Add collision for springs and propel the player if true
 		if (playerState === BALL) {
@@ -114,6 +129,7 @@
 		// Add collision for springs and store a reference to the tile that collides
 		let collidedTiles = tiles.reduce((accumulator, tileBody, index) => {
 			let collision = player.body.aabb.collideAABBVsTile(tileBody.tile)
+			let collision2 = exit.body.aabb.collideAABBVsTile(tileBody.tile)
 
 			if (collision !== false) {
 				accumulator.push(tileBody.tile)
@@ -145,6 +161,12 @@
 		// Transform Player to Spring
 		if (playerState === BALL && switchButton.isDown && isPlayerGrounded) {
 			player.kill()
+
+	 	livesLeft--
+	  winText.text = 'You have ' + (livesLeft - 1) + ' lives left to beat this level \n If you die again, you lose!\n Collect the star to win!'
+	  if (livesLeft === 0) lose()
+
+
 			playerState = SPRING
 
 			let springPosition = [player.body.x, player.body.y]
@@ -251,4 +273,17 @@
 				return 135
 		}
 	}
+
+
+	function win () {
+	  winText.text = "you win!"
+	}
+
+
+	function lose () {
+	  winText.text = "you lose! This level is EASY!\n WHAT'S THE MATTER\n WITH YOU? CAN'T YOU\n BEAT A SIMPLE LEVEL?"
+	  exit.kill()
+	}
+
+
 })()
