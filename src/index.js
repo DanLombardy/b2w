@@ -37,15 +37,16 @@
 	function preload() {
 		tiles.preload()
 		player.preload()
+		ghosts.preload()
 		springs.preload()
 	}
 
 	function create() {
 		game.create()
 		tiles.create()
-		player.create()
-		springs.create()
 		ghosts.create()
+		springs.create()
+		player.create()
 		timer.create()
 
 		debugKey = game.getGame().input.keyboard.addKey(Phaser.KeyCode.W)

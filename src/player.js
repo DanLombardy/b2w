@@ -28,8 +28,7 @@ const MINIMUM_PLAYER_VELOCITY = -1 * MAXIMUM_PLAYER_VELOCITY
 function preload() {
 	let game = getGame()
 
-	game.load.image('ball', 'assets/sprites/orb-blue.png', 50, 50)
-	game.load.image('ball2', 'assets/sprites/orb-red.png', 50, 50)
+	game.load.image('red-ball', 'assets/sprites/orb-red.png', 50, 50)
 }
 
 function create() {
@@ -50,7 +49,7 @@ function create() {
 
 function createPlayer(x, y) {
 	let game = getGame()
-	let player = game.add.sprite(x, y, 'ball')
+	let player = game.add.sprite(x, y, 'red-ball')
 
 	game.physics.ninja.enable(player)
 

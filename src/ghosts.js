@@ -24,6 +24,12 @@ let guaranteedStack
 
 let ghosts
 
+function preload() {
+	let game = getGame()
+
+	game.load.image('blue-ball', 'assets/sprites/orb-blue.png', 50, 50)
+}
+
 function create() {
 	let game = getGame()
 	let player = getPlayer()
@@ -31,7 +37,7 @@ function create() {
 	positionStack = new Stack()
 	guaranteedStack = new Stack()
 
-	saveState({ t: 0, x: player.x, y: player.y, state: player.state })
+	saveState({ t: 0, x: 0, y: 0 })
 
 	// Create the ghosted player objects
 	ghosts = game.add.group()
@@ -39,7 +45,7 @@ function create() {
 	currentGhostSessions = playerSessions
 	currentGhostSessions.forEach((session) => {
 		let position = session.first()
-		let ghost = ghosts.create(position.x, position.y, BALL)
+		let ghost = ghosts.create(position.x, position.y, 'blue-ball')
 		ghost.anchor.x = 0.5
 		ghost.anchor.y = 0.5
 	})
@@ -198,6 +204,7 @@ function saveSessionAndRestart() {
 }
 
 Object.assign(module.exports, {
+	preload,
 	create,
 	update,
 	saveState,
